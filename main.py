@@ -1,8 +1,13 @@
 import os
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from typing import List, Optional
 
-app = FastAPI()
+from database import create_document
+from schemas import Inquiry
+
+app = FastAPI(title="Budapest Garden Services API")
 
 app.add_middleware(
     CORSMiddleware,
@@ -14,7 +19,7 @@ app.add_middleware(
 
 @app.get("/")
 def read_root():
-    return {"message": "Hello from FastAPI Backend!"}
+    return {"message": "Budapest Garden Services API is running"}
 
 @app.get("/api/hello")
 def hello():
@@ -63,6 +68,52 @@ def test_database():
     response["database_name"] = "✅ Set" if os.getenv("DATABASE_NAME") else "❌ Not Set"
     
     return response
+
+# Static content for services offered in Budapest
+@app.get("/api/services")
+def list_services():
+    services = [
+        {
+            "id": 1,
+            "title": "Garden Design",
+            "description": "Tailored garden concepts inspired by Budapest's courtyards and terraces.",
+            "icon": "sprout"
+        },
+        {
+            "id": 2,
+            "title": "Seasonal Maintenance",
+            "description": "Pruning, lawn care, fertilizing and clean-ups throughout the year.",
+            "icon": "leaf"
+        },
+        {
+            "id": 3,
+            "title": "Balcony & Rooftop",
+            "description": "Compact green oases for apartments with irrigation and planters.",
+            "icon": "flower"
+        },
+        {
+            "id": 4,
+            "title": "Irrigation Systems",
+            "description": "Smart, water‑efficient drip and sprinkler systems installation.",
+            "icon": "droplet"
+        },
+        {
+            "id": 5,
+            "title": "Planting & Turf",
+            "description": "Soil preparation, planting palettes, instant turf, and mulch.",
+            "icon": "trees"
+        }
+    ]
+    return {"services": services}
+
+# Contact / inquiry endpoint (persists to MongoDB)
+@app.post("/api/inquiries")
+def create_inquiry(payload: Inquiry):
+    try:
+        inserted_id = create_document("inquiry", payload)
+        return {"ok": True, "id": inserted_id}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 if __name__ == "__main__":
